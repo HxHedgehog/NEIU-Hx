@@ -68,20 +68,20 @@ public class GuiOverlayButton extends GuiRecipeButton {
 
     protected static final DrawableResource ICON_FILL = new DrawableBuilder(
             "nei:textures/nei_sprites.png",
-            28,
-            76,
+            44,
+            36,
             9,
             10).build();
     protected static final DrawableResource ICON_FILL_ERROR = new DrawableBuilder(
             "nei:textures/nei_sprites.png",
-            37,
-            76,
+            57,
+            36,
             9,
             10).build();
     protected static final DrawableResource ICON_OVERLAY = new DrawableBuilder(
             "nei:textures/nei_sprites.png",
-            46,
-            76,
+            70,
+            36,
             9,
             10).build();
     protected static final int BUTTON_ID_SHIFT = 4;

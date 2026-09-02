@@ -34,17 +34,17 @@ public class OptionUtilities extends OptionStringSet {
     @Override
     public void drawIcons() {
         int x = buttonX();
-        LayoutManager.drawIcon(x + 4, 4, new Image(120, 24, 12, 12));
+        LayoutManager.drawIcon(x + 4, 4, new Image(84, 4, 12, 12));
         x += 24;
-        LayoutManager.drawIcon(x + 4, 4, new Image(120, 12, 12, 12));
+        LayoutManager.drawIcon(x + 4, 4, new Image(4, 4, 12, 12));
         x += 24;
-        LayoutManager.drawIcon(x + 4, 4, new Image(168, 24, 12, 12));
+        LayoutManager.drawIcon(x + 4, 4, new Image(52, 20, 12, 12));
         x += 24;
-        LayoutManager.drawIcon(x + 4, 4, new Image(144, 12, 12, 12));
+        LayoutManager.drawIcon(x + 4, 4, new Image(36, 4, 12, 12));
         x += 24;
-        LayoutManager.drawIcon(x + 4, 4, new Image(180, 24, 12, 12));
+        LayoutManager.drawIcon(x + 4, 4, new Image(68, 20, 12, 12));
         x += 24;
-        LayoutManager.drawIcon(x + 4, 4, new Image(132, 12, 12, 12));
+        LayoutManager.drawIcon(x + 4, 4, new Image(20, 4, 12, 12));
         x += 24;
 
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_LIGHTING_BIT);

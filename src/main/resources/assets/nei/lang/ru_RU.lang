@@ -125,6 +125,7 @@ nei.options.keys.bookmark=NEI Закладки
 nei.options.keys.copy=NEI Копирование
 nei.options.keys.itemzoom=NEI Увеличение предмета
 nei.options.keys.showenchant=Показать зачарование
+nei.options.keys.waila_linkup=Связь с Waila
 nei.options.keys.recipe.recipe=Рецепт
 nei.options.keys.recipe.usage=Использование
 nei.options.keys.gui.enchant=Зачарования

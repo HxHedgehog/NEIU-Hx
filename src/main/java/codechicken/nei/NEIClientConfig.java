@@ -42,6 +42,7 @@ import codechicken.nei.api.ItemInfo;
 import codechicken.nei.api.NEIInfo;
 import codechicken.nei.config.ConfigSet;
 import codechicken.nei.config.GuiHighlightTips;
+import codechicken.nei.config.GuiKeyBindSettings;
 import codechicken.nei.config.GuiNEIOptionList;
 import codechicken.nei.config.GuiOptionList;
 import codechicken.nei.config.GuiPanelSettings;
@@ -167,7 +168,11 @@ public class NEIClientConfig {
         tag.getTag("inventory.utilities").setDefaultValue("delete, magnet");
         API.addOption(new OptionUtilities("inventory.utilities"));
 
-        tag.getTag("inventory.gamemodes").setDefaultValue("creative, creative+, adventure");
+        // spectator is included in the default unconditionally: the default is written in the static
+        // initializer, which may run before EtFR's preInit initializes its spectator GameType, so
+        // gating on EtFR here would be unreliable. Without EtFR the "spectator" value is simply never
+        // offered/cycled (it is gated by isValidGamemode), so keeping it in the default is harmless.
+        tag.getTag("inventory.gamemodes").setDefaultValue("creative, creative+, adventure, spectator");
         API.addOption(new OptionGamemodes("inventory.gamemodes"));
 
         ItemSorter.initConfig(tag);
@@ -273,7 +278,7 @@ public class NEIClientConfig {
                 .getBooleanValue(false);
         API.addOption(new OptionToggleButton("inventory.guirecipe.handlerInfo", true));
 
-        tag.getTag("inventory.subsets.enabled").setComment("Enable/disable Subsets Dropdown").getBooleanValue(true);
+        tag.getTag("inventory.subsets.enabled").setComment("Enable/disable Subsets Dropdown").getBooleanValue(false);
         API.addOption(new OptionToggleButton("inventory.subsets.enabled", true));
 
         tag.getTag("inventory.subsets.widgetPosition").setComment("Subsets Widget Position").getBooleanValue(true);
@@ -387,7 +392,7 @@ public class NEIClientConfig {
 
         setFavoriteDefaults(tag);
 
-        tag.getTag("inventory.itemIDs").getIntValue(1);
+        tag.getTag("inventory.itemIDs").getIntValue(0);
         API.addOption(new OptionCycled("inventory.itemIDs", 3, true));
 
         tag.getTag("world.highlight_tips").getBooleanValue(false);
@@ -840,19 +845,17 @@ public class NEIClientConfig {
     }
 
     private static void setDefaultKeyBindings() {
-        API.addKeyBind("gui.enchant", Keyboard.KEY_X);
-        API.addKeyBind("gui.potion", Keyboard.KEY_P);
-        API.addKeyBind("gui.prev", Keyboard.KEY_PRIOR);
-        API.addKeyBind("gui.next", Keyboard.KEY_NEXT);
+        API.addKeyBind("gui.enchant", 0);
+        API.addKeyBind("gui.potion", 0);
         API.addKeyBind("gui.hide", Keyboard.KEY_O);
         API.addKeyBind("gui.search", Keyboard.KEY_F);
         API.addKeyBind("gui.overlay", Keyboard.KEY_S);
-        API.addKeyBind("gui.craft_items", Keyboard.KEY_C);
+        API.addKeyBind("gui.craft_items", 0);
         API.addKeyBind("gui.getprevioussearch", Keyboard.KEY_UP);
         API.addKeyBind("gui.getnextsearch", Keyboard.KEY_DOWN);
         API.addKeyBind("gui.next_tooltip", Keyboard.KEY_Z);
 
-        API.addKeyBind("recipe.recipe", Keyboard.KEY_R);
+        API.addKeyBind("recipe.recipe", Keyboard.KEY_J);
         API.addKeyBind("recipe.usage", Keyboard.KEY_U);
         API.addKeyBind("recipe.back", Keyboard.KEY_BACK);
         API.addKeyBind("recipe.prev_machine", Keyboard.KEY_UP);
@@ -861,12 +864,10 @@ public class NEIClientConfig {
         API.addKeyBind("recipe.next_recipe", Keyboard.KEY_RIGHT);
 
         API.addKeyBind("bookmark.add", Keyboard.KEY_A);
-        API.addKeyBind("bookmark.favorite", Keyboard.KEY_F);
-        API.addKeyBind("bookmark.favorite_item", Keyboard.KEY_F);
-        API.addKeyBind("bookmark.remove_recipe", Keyboard.KEY_A);
-        API.addKeyBind("bookmark.pull_items", Keyboard.KEY_V);
+        API.addKeyBind("bookmark.favorite", 0);
+        API.addKeyBind("bookmark.favorite_item", 0);
+        API.addKeyBind("bookmark.remove_recipe", Keyboard.KEY_DELETE);
         API.addKeyBind("bookmark.chat_link", Keyboard.KEY_L);
-        API.addKeyBind("bookmark.hide", Keyboard.KEY_B);
 
         API.addKeyBind("itemzoom.toggle", Keyboard.KEY_Z);
         API.addKeyBind("itemzoom.hold", 0);
@@ -875,7 +876,7 @@ public class NEIClientConfig {
 
         API.addKeyBind("world.chunkoverlay", Keyboard.KEY_F9);
         API.addKeyBind("world.moboverlay", Keyboard.KEY_F7);
-        API.addKeyBind("world.highlight_tips", Keyboard.KEY_NUMPAD0);
+        API.addKeyBind("world.highlight_tips", 0);
         API.addKeyBind("world.dawn", 0);
         API.addKeyBind("world.noon", 0);
         API.addKeyBind("world.dusk", 0);
@@ -886,7 +887,7 @@ public class NEIClientConfig {
 
         API.addKeyBind("copy.name", Keyboard.KEY_C);
         API.addKeyBind("copy.oredict", Keyboard.KEY_D);
-        API.addKeyBind("copy.identifier", Keyboard.KEY_X);
+        API.addKeyBind("copy.identifier", Keyboard.KEY_I);
     }
 
     public static OptionList getOptionList() {
@@ -970,7 +971,7 @@ public class NEIClientConfig {
     }
 
     public static boolean isKeyHashDown(String string) {
-        return KeyManager.isHashDown(string);
+        return KeyManager.isKeyDown(string);
     }
 
     public static String getKeyName(String keyBind) {
@@ -996,6 +997,10 @@ public class NEIClientConfig {
             NEIController.load();
             BookmarkContainerInfo.load();
             InformationHandler.load();
+
+            // "键位设置" is registered after all the loads above so it appears at the very bottom of the
+            // NEI options list, after the "工具" (tools) section whose options are added by ItemInfo.load().
+            API.addOption(new OptionOpenGui("nei_keybindings", GuiKeyBindSettings.class));
             mainNEIConfigLoaded = true;
 
             new Thread("NEI Plugin Loader") {

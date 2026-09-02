@@ -305,15 +305,28 @@ public class NEIClientUtils extends NEIServerUtils {
     }
 
     public static int getGamemode() {
-        if (invCreativeMode()) return 2;
+        // spectator must be checked before invCreativeMode, otherwise a stale "creative+" flag
+        // would mask the actual spectator state
+        if (mc().playerController.currentGameType == NEIModContainer.getEtFuturumSpectatorGameType()) return 4;
+        // "creative+" is an extension of creative: it only applies while the actual game type is
+        // creative. Checking isInCreativeMode() first prevents a stale "creative+" flag (left over
+        // from switching gamemode via vanilla F3+F4 / /gamemode, which bypass NEI's setGamemode)
+        // from being reported as creative+ while the player is actually in survival.
+        if (mc().playerController.isInCreativeMode() && invCreativeMode()) return 2;
         else if (mc().playerController.isInCreativeMode()) return 1;
         else if (mc().playerController.currentGameType.isAdventure()) return 3;
         else return 0;
     }
 
     public static boolean isValidGamemode(String s) {
-        return s.equals("survival")
-                || canPerformAction(s) && Arrays.asList(getStringArrSetting("inventory.gamemodes")).contains(s);
+        if (s.equals("survival")) return true;
+        // The spectator mode only exists when EtFR provides it (it is not part of the vanilla
+        // inventory.gamemodes config), so gate it on EtFR's spectator GameType directly.
+        if (s.equals("spectator")) {
+            return NEIModContainer.getEtFuturumSpectatorGameType() != null && canPerformAction(s)
+                    && Arrays.asList(getStringArrSetting("inventory.gamemodes")).contains(s);
+        }
+        return canPerformAction(s) && Arrays.asList(getStringArrSetting("inventory.gamemodes")).contains(s);
     }
 
     public static int getNextGamemode() {

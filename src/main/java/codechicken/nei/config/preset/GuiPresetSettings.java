@@ -8,6 +8,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.Tessellator;
 
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.Rectangle;
 
@@ -113,6 +114,15 @@ public class GuiPresetSettings extends GuiScreenWidget {
     @Override
     public boolean doesGuiPauseGame() {
         return true;
+    }
+
+    @Override
+    public void keyTyped(char c, int keycode) {
+        if (keycode == Keyboard.KEY_ESCAPE || keycode == Keyboard.KEY_BACK) {
+            Minecraft.getMinecraft().displayGuiScreen(parent);
+            return;
+        }
+        super.keyTyped(c, keycode);
     }
 
     @Override

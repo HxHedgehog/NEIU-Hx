@@ -229,7 +229,7 @@ public class SearchField extends TextField implements ItemFilterProvider {
     @Override
     public void lastKeyTyped(int keyID, char keyChar) {
 
-        if (isVisible() && KeyManager.isHashDown("gui.search")) {
+        if (isVisible() && KeyManager.isKeyDown("gui.search")) {
             setFocus(true);
         }
         if (focused() && KeyManager.isKeyDown("gui.getprevioussearch")) {

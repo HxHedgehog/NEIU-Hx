@@ -10,6 +10,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.play.INetHandlerPlayClient;
 import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldSettings.GameType;
 
 import codechicken.core.ClientUtils;
 import codechicken.lib.inventory.InventoryUtils;
@@ -74,7 +75,8 @@ public class NEICPH implements IClientPacketHandler {
     }
 
     private void handleGamemode(Minecraft mc, int mode) {
-        mc.playerController.setGameType(NEIServerUtils.getGameType(mode));
+        GameType gameType = NEIServerUtils.getGameType(mode);
+        if (gameType != null) mc.playerController.setGameType(gameType);
     }
 
     private void handleActionEnabled(PacketCustom packet) {

@@ -220,8 +220,10 @@ public class GuiOptionList extends GuiScreenWidget {
     @Override
     public void actionPerformed(String ident, Object... params) {
         if (ident.equals("back")) {
-            if (parent instanceof GuiOptionList) ((GuiOptionList) parent).world = world;
-            Minecraft.getMinecraft().displayGuiScreen(parent);
+            // The "关闭设置界面" button closes the entire settings GUI, regardless of the current level
+            GuiScreen p = parent;
+            while (p instanceof GuiOptionList) p = ((GuiOptionList) p).parent;
+            Minecraft.getMinecraft().displayGuiScreen(p);
         } else if (ident.equals("world")) {
             world = !world;
             worldButton.text = worldButtonName();
@@ -257,10 +259,10 @@ public class GuiOptionList extends GuiScreenWidget {
     @Override
     public void keyTyped(char c, int keycode) {
         if (keycode == Keyboard.KEY_ESCAPE) {
-            GuiScreen p = parent;
-            while (p instanceof GuiOptionList) p = ((GuiOptionList) p).parent;
-
-            Minecraft.getMinecraft().displayGuiScreen(p);
+            // ESC returns to the previous settings screen (mirroring the old back-button behaviour),
+            // instead of closing the whole settings GUI at once
+            if (parent instanceof GuiOptionList) ((GuiOptionList) parent).world = world;
+            Minecraft.getMinecraft().displayGuiScreen(parent);
         } else {
             super.keyTyped(c, keycode);
         }

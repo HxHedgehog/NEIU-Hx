@@ -335,7 +335,14 @@ public class NEIServerUtils {
     }
 
     public static int getCreativeMode(EntityPlayerMP player) {
-        if (NEIServerConfig.forPlayer(player.getCommandSenderName()).isActionEnabled("creative+")) return 2;
+        if (NEIModContainer.getEtFuturumSpectatorGameType() != null
+                && player.theItemInWorldManager.getGameType() == NEIModContainer.getEtFuturumSpectatorGameType())
+            return 4;
+        // "creative+" only applies while the actual game type is creative; a stale flag left over
+        // from an external gamemode switch (vanilla F3+F4 / /gamemode) must not be reported here.
+        if (player.theItemInWorldManager.isCreative()
+                && NEIServerConfig.forPlayer(player.getCommandSenderName()).isActionEnabled("creative+"))
+            return 2;
         else if (player.theItemInWorldManager.isCreative()) return 1;
         else if (player.theItemInWorldManager.getGameType().isAdventure()) return 3;
         else return 0;
@@ -350,6 +357,8 @@ public class NEIServerUtils {
                 return GameType.CREATIVE;
             case 3:
                 return GameType.ADVENTURE;
+            case 4:
+                return NEIModContainer.getEtFuturumSpectatorGameType();
         }
         return null;
     }
@@ -367,7 +376,9 @@ public class NEIServerUtils {
             NEISPH.processCreativeInv(player, true);
 
         // change it on the server
-        player.theItemInWorldManager.setGameType(getGameType(mode));
+        GameType gameType = getGameType(mode);
+        if (gameType == null) return; // e.g. spectator without EtFR present on this side
+        player.theItemInWorldManager.setGameType(gameType);
 
         // tell the client to change it
         new PacketCustom(NEISPH.channel, S2C.SEND_GAME_MODE).writeByte(mode).sendToPlayer(player);

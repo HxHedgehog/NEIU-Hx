@@ -66,15 +66,15 @@ public class ScrollBar {
 
     public static ScrollBar defaultVerticalBar() {
         return new ScrollBar().setTrackWidth(8)
-                .setTrackTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 29, 95, 8, 11).build(), 3, 4)
-                .setThumbTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 22, 96, 6, 9).build(), 3, 2)
+                .setTrackTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 21, 50, 8, 11).build(), 3, 4)
+                .setThumbTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 33, 50, 6, 9).build(), 3, 2)
                 .setThumbPadding(1, 1, 1, 1);
     }
 
     public static ScrollBar defaultHorizontalBar() {
         return new ScrollBar().setTrackWidth(8).setOverflowType(OverflowType.SCROLL)
-                .setTrackTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 0, 97, 11, 8).build(), 3, 4)
-                .setThumbTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 12, 98, 9, 6).build(), 3, 2)
+                .setTrackTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 43, 50, 11, 8).build(), 3, 4)
+                .setThumbTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 58, 50, 9, 6).build(), 3, 2)
                 .setThumbPadding(1, 1, 1, 1);
     }
 

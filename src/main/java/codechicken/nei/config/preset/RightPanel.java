@@ -81,7 +81,7 @@ public class RightPanel extends GuiWidget {
         @Override
         public void lastKeyTyped(int keyID, char keyChar) {
 
-            if (!focused() && KeyManager.isHashDown("gui.search")) {
+            if (!focused() && KeyManager.isKeyDown("gui.search")) {
                 setFocus(true);
             }
 

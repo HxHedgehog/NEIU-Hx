@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import net.minecraft.world.WorldSettings.GameType;
+
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 
@@ -72,6 +74,37 @@ public class NEIModContainer extends DummyModContainer {
 
     public static boolean isCCLoaded() {
         return cubicChunksLoaded;
+    }
+
+    /**
+     * @return true when the EtFuturum (EtFR) mod is installed.
+     */
+    public static boolean isEtFuturumLoaded() {
+        try {
+            return Loader.isModLoaded("etfuturum");
+        } catch (Throwable ignored) {
+            // Loader.isModLoaded can fail outside the launchwrapper environment (e.g. unit tests that
+            // initialize NEIClientConfig, which constructs OptionGamemodes). Degrade to "not loaded".
+            return false;
+        }
+    }
+
+    /**
+     * EtFR adds a client/server shared SPECTATOR entry to {@link GameType} via EnumHelper
+     * ({@code ganymedes01.etfuturum.spectator.SpectatorMode#SPECTATOR_GAMETYPE}). We look it up via reflection so NEI
+     * has no compile/runtime dependency on EtFR.
+     *
+     * @return EtFR's spectator {@link GameType}, or null when EtFR is not installed or its spectator mode is disabled
+     *         in the EtFR config.
+     */
+    public static GameType getEtFuturumSpectatorGameType() {
+        if (!isEtFuturumLoaded()) return null;
+        try {
+            Class<?> clazz = Class.forName("ganymedes01.etfuturum.spectator.SpectatorMode");
+            return (GameType) clazz.getField("SPECTATOR_GAMETYPE").get(null);
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     @Override

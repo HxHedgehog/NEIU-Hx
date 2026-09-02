@@ -21,11 +21,15 @@ import net.minecraft.launchwrapper.IClassTransformer;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
@@ -130,6 +134,183 @@ public class NEITransformer implements IClassTransformer {
                             asmblocks.get("n_saveOptionsSendSettings"),
                             asmblocks.get("saveOptionsRestoreHook"),
                             false));
+
+            // Hide every mod key binding (NEI keys and other mods' keys) from the vanilla controls
+            // screen (GuiKeyBindingList), keeping them fully functional. They are managed instead from
+            // the NEI "键位设置" screen. The GuiKeyBindingList constructor clones gameSettings.keyBindings
+            // into a local display array used both for the list capacity and for rendering; we inject a
+            // single call to KeyBindingListHooks.trimModKeys right after that clone so the visible list
+            // (and its size) only contains vanilla bindings. Done with a direct ClassNode walk (find the
+            // ArrayUtils.clone call and the following ASTORE) instead of sequence-needle matching, which
+            // is unreliable here.
+            transformer.add(
+                    new MethodTransformer(
+                            new ObfMapping(
+                                    "net/minecraft/client/gui/GuiKeyBindingList",
+                                    "<init>",
+                                    "(Lnet/minecraft/client/gui/GuiControls;Lnet/minecraft/client/Minecraft;)V")) {
+
+                        @Override
+                        public void transform(MethodNode mv) {
+                            AbstractInsnNode clone = null;
+                            for (AbstractInsnNode in = mv.instructions.getFirst(); in != null; in = in.getNext()) {
+                                if (in.getOpcode() == Opcodes.INVOKESTATIC && in instanceof MethodInsnNode
+                                        && ((MethodInsnNode) in).owner.equals("org/apache/commons/lang3/ArrayUtils")
+                                        && ((MethodInsnNode) in).name.equals("clone")) {
+                                    clone = in;
+                                    break;
+                                }
+                            }
+                            if (clone == null) throw new RuntimeException(
+                                    "NEI: ArrayUtils.clone not found in GuiKeyBindingList.<init>");
+
+                            AbstractInsnNode store = clone.getNext();
+                            while (store != null && store.getOpcode() != Opcodes.ASTORE) store = store.getNext();
+                            if (store == null) throw new RuntimeException(
+                                    "NEI: ASTORE after ArrayUtils.clone not found in GuiKeyBindingList.<init>");
+
+                            int var = ((VarInsnNode) store).var;
+                            InsnList insns = new InsnList();
+                            insns.add(new VarInsnNode(Opcodes.ALOAD, var));
+                            insns.add(
+                                    new MethodInsnNode(
+                                            Opcodes.INVOKESTATIC,
+                                            "codechicken/nei/asm/KeyBindingListHooks",
+                                            "trimModKeys",
+                                            "([Lnet/minecraft/client/settings/KeyBinding;)[Lnet/minecraft/client/settings/KeyBinding;"));
+                            insns.add(new VarInsnNode(Opcodes.ASTORE, var));
+                            mv.instructions.insert(store, insns);
+
+                            // The display array is allocated (PUTFIELD) before its slots are filled by the
+                            // loop below, so we must compact the trailing NEI-category nulls only once the
+                            // whole constructor has run. Grab the field descriptor from the first PUTFIELD
+                            // following the clone, then inject the compact just before the final RETURN.
+                            FieldInsnNode storeField = null;
+                            for (AbstractInsnNode in = store.getNext(); in != null; in = in.getNext()) {
+                                if (in.getOpcode() == Opcodes.PUTFIELD && in instanceof FieldInsnNode) {
+                                    storeField = (FieldInsnNode) in;
+                                    break;
+                                }
+                            }
+                            if (storeField == null) throw new RuntimeException(
+                                    "NEI: field_148190_m store not found in GuiKeyBindingList.<init>");
+                            AbstractInsnNode lastReturn = null;
+                            for (AbstractInsnNode in = mv.instructions.getFirst(); in != null; in = in.getNext()) {
+                                if (in.getOpcode() == Opcodes.RETURN) lastReturn = in;
+                            }
+                            if (lastReturn == null)
+                                throw new RuntimeException("NEI: no RETURN found in GuiKeyBindingList.<init>");
+                            InsnList compact = new InsnList();
+                            compact.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                            compact.add(new InsnNode(Opcodes.DUP));
+                            compact.add(
+                                    new FieldInsnNode(
+                                            Opcodes.GETFIELD,
+                                            storeField.owner,
+                                            storeField.name,
+                                            storeField.desc));
+                            compact.add(
+                                    new MethodInsnNode(
+                                            Opcodes.INVOKESTATIC,
+                                            "codechicken/nei/asm/KeyBindingListHooks",
+                                            "compactEntries",
+                                            "([Lnet/minecraft/client/gui/GuiListExtended$IGuiListEntry;)[Lnet/minecraft/client/gui/GuiListExtended$IGuiListEntry;"));
+                            compact.add(
+                                    new FieldInsnNode(
+                                            Opcodes.PUTFIELD,
+                                            storeField.owner,
+                                            storeField.name,
+                                            storeField.desc));
+                            mv.instructions.insertBefore(lastReturn, compact);
+                        }
+                    });
+
+            // Route the vanilla controls screen conflict detection through a combo-aware predicate.
+            // GuiKeyBindingList$KeyEntry.drawEntry compares `keybinding.getKeyCode() ==
+            // this.field_148282_b.getKeyCode()`; we replace that int comparison with
+            // KeyBindingListHooks.conflicts(a, b) so NEI combo keys (with modifier bits stored in the
+            // key code) are never treated as their plain main key and falsely flagged as conflicting.
+            // Several getKeyCode() calls exist in the method (btnReset.enabled, getKeyDisplayString),
+            // so we locate the conflict pair by structure: the last getKeyCode immediately followed by
+            // IF_ICMPNE is the right-hand side of the conflict compare.
+            transformer.add(
+                    new MethodTransformer(
+                            new ObfMapping(
+                                    "net/minecraft/client/gui/GuiKeyBindingList$KeyEntry",
+                                    "func_148279_a",
+                                    "(IIIIILnet/minecraft/client/renderer/Tessellator;IIZ)V")) {
+
+                        @Override
+                        public void transform(MethodNode mv) {
+                            ObfMapping getKeyCodeMap = new ObfMapping(
+                                    "net/minecraft/client/settings/KeyBinding",
+                                    "func_151463_i",
+                                    "()I").toClassloading();
+                            final String owner = getKeyCodeMap.s_owner;
+                            final String name = getKeyCodeMap.s_name;
+                            final String keyBindingDesc = "L" + owner + ";";
+
+                            MethodInsnNode second = null;
+                            for (AbstractInsnNode in = mv.instructions.getFirst(); in != null; in = in.getNext()) {
+                                if (in.getOpcode() == Opcodes.INVOKEVIRTUAL && in instanceof MethodInsnNode) {
+                                    MethodInsnNode min = (MethodInsnNode) in;
+                                    if (min.owner.equals(owner) && min.name.equals(name)) {
+                                        AbstractInsnNode next = in.getNext();
+                                        if (next != null && next.getOpcode() == Opcodes.IF_ICMPNE) {
+                                            second = min;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (second == null) throw new RuntimeException(
+                                    "NEI: conflict getKeyCode compare not found in GuiKeyBindingList$KeyEntry.drawEntry");
+
+                            MethodInsnNode first = null;
+                            for (AbstractInsnNode in = second.getPrevious(); in != null; in = in.getPrevious()) {
+                                if (in.getOpcode() == Opcodes.INVOKEVIRTUAL && in instanceof MethodInsnNode) {
+                                    MethodInsnNode min = (MethodInsnNode) in;
+                                    if (min.owner.equals(owner) && min.name.equals(name)) {
+                                        first = min;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (first == null) throw new RuntimeException(
+                                    "NEI: first getKeyCode of conflict compare not found in GuiKeyBindingList$KeyEntry.drawEntry");
+
+                            // verify the expected shape: ... getKeyCode -> ALOAD 0 -> GETFIELD LKeyBinding; ->
+                            // getKeyCode -> IF_ICMPNE
+                            AbstractInsnNode firstNext = first.getNext();
+                            AbstractInsnNode secondPrev = second.getPrevious();
+                            if (firstNext == null || firstNext.getOpcode() != Opcodes.ALOAD
+                                    || ((VarInsnNode) firstNext).var != 0
+                                    || secondPrev == null
+                                    || secondPrev.getOpcode() != Opcodes.GETFIELD
+                                    || !(secondPrev instanceof FieldInsnNode)
+                                    || !((FieldInsnNode) secondPrev).desc.equals(keyBindingDesc)) {
+                                throw new RuntimeException(
+                                        "NEI: unexpected conflict compare structure in GuiKeyBindingList$KeyEntry.drawEntry");
+                            }
+
+                            // The leading getKeyCode() result would be unused once the pair becomes a
+                            // hook call: drop it, keeping the ALOAD (arg 1) and ALOAD 0 / GETFIELD (arg 2).
+                            // Capture the jump BEFORE replacing the node: InsnList.set detaches the old
+                            // node, nulling its next pointer, so reading second.getNext() afterwards
+                            // would always return null.
+                            AbstractInsnNode cmp = second.getNext();
+                            if (cmp == null || cmp.getOpcode() != Opcodes.IF_ICMPNE) throw new RuntimeException(
+                                    "NEI: IF_ICMPNE after conflict compare not found in GuiKeyBindingList$KeyEntry.drawEntry");
+                            mv.instructions.remove(first);
+                            MethodInsnNode hook = new MethodInsnNode(
+                                    Opcodes.INVOKESTATIC,
+                                    "codechicken/nei/asm/KeyBindingListHooks",
+                                    "conflicts",
+                                    "(" + keyBindingDesc + keyBindingDesc + ")Z");
+                            mv.instructions.set(second, hook);
+                            mv.instructions.set(cmp, new JumpInsnNode(Opcodes.IFEQ, ((JumpInsnNode) cmp).label));
+                        }
+                    });
         }
 
         String GuiContainer = "net/minecraft/client/gui/inventory/GuiContainer";
@@ -460,4 +641,5 @@ public class NEITransformer implements IClassTransformer {
 
         return bytes;
     }
+
 }

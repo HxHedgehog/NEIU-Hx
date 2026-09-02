@@ -87,7 +87,7 @@ public abstract class ShortcutInputHandler {
 
             if (groupId != -1) {
 
-                if (KeyManager.isHashDown("bookmark.remove_recipe", NEIClientUtils.SHIFT_HASH)) {
+                if (KeyManager.isKeyDown("bookmark.remove_recipe")) {
                     ItemPanels.bookmarkPanel.removeGroup(groupId);
                     return true;
                 }
@@ -96,13 +96,12 @@ public abstract class ShortcutInputHandler {
                     return ItemPanels.bookmarkPanel.pullBookmarkItems(groupId, NEIClientUtils.shiftKey());
                 }
 
-                if (KeyManager.isKeyDown("bookmark.chat_link") && NEIClientUtils.controlKey()) {
+                if (KeyManager.isKeyDown("bookmark.chat_link")) {
                     NEIClientUtils.sendChatItemLink(BookmarkPayload.of(groupId).toNBT());
                     return true;
                 }
 
                 if (NEIClientConfig.autocraftingEnabled() && KeyManager.isKeyDown("gui.craft_items")
-                        && NEIClientUtils.shiftKey()
                         && ItemPanels.bookmarkPanel.getGrid().isCraftingMode(groupId)) {
                     final RecipeChainMath math = ItemPanels.bookmarkPanel.getGrid().createRecipeChainMath(groupId);
 
@@ -128,19 +127,19 @@ public abstract class ShortcutInputHandler {
             return openOverlayRecipe(stackover);
         }
 
-        if (KeyManager.isHashDown("copy.name", NEIClientUtils.CTRL_HASH)) {
+        if (KeyManager.isKeyDown("copy.name")) {
             return copyItemStackName(stackover);
         }
 
-        if (KeyManager.isHashDown("copy.identifier", NEIClientUtils.CTRL_HASH)) {
+        if (KeyManager.isKeyDown("copy.identifier")) {
             return copyItemStackID(stackover);
         }
 
-        if (KeyManager.isHashDown("copy.oredict", NEIClientUtils.CTRL_HASH)) {
+        if (KeyManager.isKeyDown("copy.oredict")) {
             return copyItemStackOreDictionary(stackover);
         }
 
-        if (KeyManager.isKeyDown("bookmark.chat_link") && NEIClientUtils.controlKey()) {
+        if (KeyManager.isKeyDown("bookmark.chat_link")) {
             return sendRecipeInChatLink(stackover, NEIClientUtils.shiftKey());
         }
 
@@ -152,7 +151,7 @@ public abstract class ShortcutInputHandler {
             return GuiUsageRecipe.openRecipeGui("item", stackover);
         }
 
-        if (KeyManager.isHashDown("bookmark.favorite", NEIClientUtils.SHIFT_HASH)) {
+        if (KeyManager.isKeyDown("bookmark.favorite")) {
             return saveFavoriteTree(stackover);
         }
 
@@ -164,8 +163,7 @@ public abstract class ShortcutInputHandler {
             return pullRecipeItems(stackover, NEIClientUtils.shiftKey());
         }
 
-        if (NEIClientConfig.autocraftingEnabled() && KeyManager.isKeyDown("gui.craft_items")
-                && NEIClientUtils.shiftKey()) {
+        if (NEIClientConfig.autocraftingEnabled() && KeyManager.isKeyDown("gui.craft_items")) {
             return runAutoCrafting(stackover, !NEIClientUtils.controlKey());
         }
 

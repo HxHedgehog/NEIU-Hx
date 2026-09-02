@@ -564,7 +564,7 @@ public class LayoutManager implements IContainerInputHandler, IContainerTooltipH
                                 GuiContainerManager.itemDisplayNameShort(getHeldItem())));
             }
         };
-        gamemode = new ButtonCycled(3) {
+        gamemode = new ButtonCycled(NEIModContainer.isEtFuturumLoaded() ? 4 : 3) {
 
             @Override
             public boolean onButtonPress(boolean rightclick) {

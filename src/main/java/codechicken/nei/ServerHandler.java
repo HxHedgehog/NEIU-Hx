@@ -5,6 +5,7 @@ import java.util.List;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldSettings.GameType;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
 
@@ -50,6 +51,12 @@ public class ServerHandler {
             PlayerSave save = NEIServerConfig.forPlayer(player.getCommandSenderName());
             if (save == null) return;
             updateMagneticPlayer(player, save);
+            // "creative+" only makes sense while the actual game type is creative. Switching game
+            // mode externally (vanilla F3+F4 / /gamemode, or EtFR) bypasses NEI's setGamemode, so
+            // the persisted flag can go stale. Clear it so the client gets synced back (via
+            // PlayerSave.enableAction) and the game mode value stays consistent on both sides.
+            if (save.isActionEnabled("creative+") && player.theItemInWorldManager.getGameType() != GameType.CREATIVE)
+                save.enableAction("creative+", false);
             save.updateOpChange(player);
             save.save();
         }

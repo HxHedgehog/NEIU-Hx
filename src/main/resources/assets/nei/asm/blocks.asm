@@ -83,6 +83,31 @@ INVOKEVIRTUAL net/minecraft/client/settings/GameSettings.func_82879_c ()V
 list saveOptionsRestoreHook
 INVOKESTATIC codechicken/nei/asm/SaveOptionsFixHooks.onAfterSaveOptions ()V
 
+#begin GuiKeyBindingList patches (hide NEI key bindings from the vanilla controls screen)
+
+list d_keyBindingListFilter
+ALOAD 2
+GETFIELD net/minecraft/client/Minecraft.field_71474_y : Lnet/minecraft/client/settings/GameSettings;
+GETFIELD net/minecraft/client/settings/GameSettings.field_74324_K : [Lnet/minecraft/client/settings/KeyBinding;
+INVOKESTATIC org/apache/commons/lang3/ArrayUtils.clone ([Ljava/lang/Object;)Ljava/lang/Object;
+
+list keyBindingListFilter
+ALOAD 2
+GETFIELD net/minecraft/client/Minecraft.field_71474_y : Lnet/minecraft/client/settings/GameSettings;
+GETFIELD net/minecraft/client/settings/GameSettings.field_74324_K : [Lnet/minecraft/client/settings/KeyBinding;
+INVOKESTATIC codechicken/nei/asm/KeyBindingListHooks.filterKeyBindings ([Lnet/minecraft/client/settings/KeyBinding;)[Lnet/minecraft/client/settings/KeyBinding;
+
+list d_keyBindingListCapacity
+ALOAD 3
+ARRAYLENGTH
+INVOKESTATIC net/minecraft/client/settings/KeyBinding.func_151467_c ()Ljava/util/Set;
+INVOKEINTERFACE java/util/Set.size ()I
+IADD
+
+list keyBindingListCapacity
+ALOAD 3
+INVOKESTATIC codechicken/nei/asm/KeyBindingListHooks.countEntries ([Lnet/minecraft/client/settings/KeyBinding;)I
+
 
 #begin GuiContainer patches
 

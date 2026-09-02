@@ -77,8 +77,8 @@ public abstract class GuiRecipe<H extends IRecipeHandler> extends GuiContainer i
 
     protected static final ScrollBar VERTICAL_SCROLLBAR = new ScrollBar().setTrackWidth(14)
             .setOverflowType(OverflowType.AUTO).setScrollPlace(ScrollPlace.END)
-            .setTrackTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 42, 90, 13, 21).build(), 9, 9)
-            .setThumbTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 22, 96, 6, 9).build(), 3, 2)
+            .setTrackTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 4, 50, 13, 21).build(), 9, 9)
+            .setThumbTexture(new DrawableBuilder("nei:textures/nei_sprites.png", 33, 50, 6, 9).build(), 3, 2)
             .setThumbPadding(1, 6, 0, 6);
 
     public static final List<IRecipeFilterProvider> recipeFilterers = new LinkedList<>();
@@ -409,7 +409,7 @@ public abstract class GuiRecipe<H extends IRecipeHandler> extends GuiContainer i
         this.container.y = this.guiTop + 32;
         this.container.h = this.ySize - 32 - 4;
 
-        GuiRecipe.toggleSearch.icon = new DrawableBuilder("nei:textures/nei_sprites.png", 0, 76, 10, 10).build();
+        GuiRecipe.toggleSearch.icon = new DrawableBuilder("nei:textures/nei_sprites.png", 4, 36, 10, 10).build();
         GuiRecipe.toggleSearch.w = GuiRecipe.toggleSearch.h = 12;
         GuiRecipe.toggleSearch.x = this.guiLeft + BORDER_PADDING + BUTTON_WIDTH;
         GuiRecipe.toggleSearch.y = this.guiTop + 17;

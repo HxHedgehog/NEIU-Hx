@@ -299,8 +299,7 @@ public class NEIRecipeWidget extends Widget {
     @Override
     public boolean handleKeyPress(int keyID, char keyChar) {
 
-        if (NEIClientConfig.favoritesEnabled()
-                && KeyManager.isHashDown("bookmark.favorite_item", NEIClientUtils.SHIFT_HASH)) {
+        if (NEIClientConfig.favoritesEnabled() && KeyManager.isKeyDown("bookmark.favorite_item")) {
             final Point mouse = GuiDraw.getMousePosition();
             final int yShift = this.handlerInfo.getYShift();
             PositionedStack pStackOver = null;

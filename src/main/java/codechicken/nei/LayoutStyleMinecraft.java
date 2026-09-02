@@ -26,18 +26,21 @@ public class LayoutStyleMinecraft extends LayoutStyle {
 
     @Override
     public void init() {
-        LayoutManager.delete.icon = new Image(144, 12, 12, 12);
-        LayoutManager.rain.icon = new Image(120, 12, 12, 12);
-        LayoutManager.gamemode.icons[0] = new Image(132, 12, 12, 12);
-        LayoutManager.gamemode.icons[1] = new Image(156, 12, 12, 12);
-        LayoutManager.gamemode.icons[2] = new Image(168, 12, 12, 12);
-        LayoutManager.magnet.icons[0] = new Image(180, 24, 12, 12);
-        LayoutManager.magnet.icons[1] = new Image(180, 36, 12, 12);
-        LayoutManager.timeButtons[0].icon = new Image(132, 24, 12, 12);
-        LayoutManager.timeButtons[1].icon = new Image(120, 24, 12, 12);
-        LayoutManager.timeButtons[2].icon = new Image(144, 24, 12, 12);
-        LayoutManager.timeButtons[3].icon = new Image(156, 24, 12, 12);
-        LayoutManager.heal.icon = new Image(168, 24, 12, 12);
+        LayoutManager.delete.icon = new Image(36, 4, 12, 12);
+        LayoutManager.rain.icon = new Image(4, 4, 12, 12);
+        LayoutManager.gamemode.icons[0] = new Image(20, 4, 12, 12);
+        LayoutManager.gamemode.icons[1] = new Image(52, 4, 12, 12);
+        LayoutManager.gamemode.icons[2] = new Image(68, 4, 12, 12);
+        if (NEIModContainer.isEtFuturumLoaded()) {
+            LayoutManager.gamemode.icons[3] = new Image(100, 4, 12, 12); // 旁观模式 (btn_spectator)
+        }
+        LayoutManager.magnet.icons[0] = new Image(68, 20, 12, 12);
+        LayoutManager.magnet.icons[1] = new Image(84, 20, 12, 12);
+        LayoutManager.timeButtons[0].icon = new Image(4, 20, 12, 12);
+        LayoutManager.timeButtons[1].icon = new Image(84, 4, 12, 12);
+        LayoutManager.timeButtons[2].icon = new Image(20, 20, 12, 12);
+        LayoutManager.timeButtons[3].icon = new Image(36, 20, 12, 12);
+        LayoutManager.heal.icon = new Image(52, 20, 12, 12);
         LayoutManager.itemPresenceOverlays[0] = new DrawableBuilder("nei:textures/nei_tabbed_sprites.png", 0, 40, 8, 8)
                 .build();
         LayoutManager.itemPresenceOverlays[1] = new DrawableBuilder("nei:textures/nei_tabbed_sprites.png", 8, 40, 8, 8)
@@ -81,6 +84,8 @@ public class LayoutStyleMinecraft extends LayoutStyle {
                 LayoutManager.gamemode.index = 1;
             } else if (NEIClientUtils.isValidGamemode("adventure")) {
                 LayoutManager.gamemode.index = 2;
+            } else if (NEIClientUtils.isValidGamemode("spectator")) {
+                LayoutManager.gamemode.index = 3;
             }
         }
         LayoutManager.bookmarksButton.index = NEIClientConfig.isBookmarkPanelHidden() ? 0 : 1;
@@ -98,7 +103,8 @@ public class LayoutStyleMinecraft extends LayoutStyle {
         }
 
         if (NEIClientUtils.isValidGamemode("creative") || NEIClientUtils.isValidGamemode("creative+")
-                || NEIClientUtils.isValidGamemode("adventure")) {
+                || NEIClientUtils.isValidGamemode("adventure")
+                || NEIClientUtils.isValidGamemode("spectator")) {
             layoutButton(LayoutManager.gamemode);
         }
 

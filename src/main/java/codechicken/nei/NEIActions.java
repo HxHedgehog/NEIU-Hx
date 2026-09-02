@@ -47,6 +47,7 @@ public class NEIActions {
         addAction("creative");
         addAction("creative+", true);
         addAction("adventure", "creative");
+        addAction("spectator", "creative");
         addAction("rain");
         addAction("item");
         addAction("heal");
@@ -61,10 +62,16 @@ public class NEIActions {
         canDisable.add("dusk");
         canDisable.add("midnight");
         canDisable.add("rain");
+
+        // The spectator entry only exists in the cycle when EtFR actually provides it,
+        // so mode index 4 can never be sent to a server that can't handle it.
+        if (NEIModContainer.getEtFuturumSpectatorGameType() != null) {
+            gameModes = new String[] { "survival", "creative", "creative+", "adventure", "spectator" };
+        }
     }
 
     public static final String[] timeZones = new String[] { "dawn", "noon", "dusk", "midnight" };
-    public static final String[] gameModes = new String[] { "survival", "creative", "creative+", "adventure" };
+    public static String[] gameModes = new String[] { "survival", "creative", "creative+", "adventure" };
 
     public String name;
     public String base;

@@ -35,14 +35,14 @@ public class GuiFavoriteButton extends GuiRecipeButton {
 
     protected static final DrawableResource ICON_STATE_OFF = new DrawableBuilder(
             "nei:textures/nei_sprites.png",
-            10,
-            76,
+            18,
+            36,
             9,
             10).build();
     protected static final DrawableResource ICON_STATE_ON = new DrawableBuilder(
             "nei:textures/nei_sprites.png",
-            19,
-            76,
+            31,
+            36,
             9,
             10).build();
 
