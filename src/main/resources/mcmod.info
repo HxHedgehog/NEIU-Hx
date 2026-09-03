@@ -6,9 +6,9 @@
         "mcversion": "${minecraftVersion}",
         "description": "Recipe Viewer, Inventory Manager, Item Spawner, Cheats and more; GTNH Version includes many enhancements.",
         "url": "https://github.com/GTNewHorizons/NotEnoughItems",
-        "credits": "Alexandria - original idea",
+        "credits": "Alexandria, ChickenBones, mitchej123",
         "license": "LGPL-3.0",
-        "authorList": [ "ChickenBones", "mitchej123" ],
+        "authorList": [ "GTNH Dev Team", "Blue Fat Fish", "HxHedgehog" ],
         "dependencies": [ "CodeChickenCore" ]
     }
 ]

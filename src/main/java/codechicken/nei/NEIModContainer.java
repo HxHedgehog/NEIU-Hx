@@ -55,7 +55,7 @@ public class NEIModContainer extends DummyModContainer {
 
     private static ModMetadata getModMetadata() {
         final ModMetadata modMetadata = new ModMetadata();
-        modMetadata.name = "NotEnoughItems";
+        modMetadata.name = "NEIU Hx";
         modMetadata.modId = "NotEnoughItems";
         modMetadata.version = Tags.VERSION;
         modMetadata.authorList = Arrays.asList("ChickenBones", "mitchej123", "SLPrime");
