@@ -142,6 +142,10 @@ public class GuiKeyBindSettings extends GuiScreenWidget {
         listening = false;
         selectedIndex = -1;
         save();
+        // setKeyCode 不更新 KeyBinding 的静态 keyCode->binding 分发表（原版只在构造器
+        // 和 loadOptions 末尾重建），改键后其他 mod 的 isPressed() 仍路由到旧键位、
+        // 新键位无事件 —— 仿原版 GuiControls 改键后手动重建。
+        KeyBinding.resetKeyBindingArrayAndHash();
         slot.rebuild();
     }
 
@@ -165,7 +169,7 @@ public class GuiKeyBindSettings extends GuiScreenWidget {
                 if (e.kind == KeysScrollSlot.Entry.Kind.MOD_KEY) {
                     e.binding.setKeyCode(keycode);
                 } else {
-                    KeyManager.setMainKey(e.ident, keycode);
+                    KeyManager.setMainKeyFromCapture(e.ident, keycode);
                 }
                 commit();
             }
@@ -391,7 +395,60 @@ public class GuiKeyBindSettings extends GuiScreenWidget {
 
         @Override
         public int getSlotHeight(int slot) {
+            // 键名超宽（含括号后缀）的行加高到 40：名字换行到第二栏，按钮仍在第一栏原位
+            if (slot >= 0 && slot < entries.size() && isTwoLineEntry(entries.get(slot))) return 40;
             return 22;
+        }
+
+        /** 行内键名显示文本（监听改键时的"请按键"提示很短，判定统一用键名描述以保证行高稳定）。 */
+        private String entryDisplayName(Entry e) {
+            if (e.kind == Entry.Kind.NEI_KEY) {
+                KeyBinding b = KeyManager.getKeyBinding(e.ident);
+                return b == null ? "" : StatCollector.translateToLocal(b.getKeyDescription());
+            }
+            if (e.kind == Entry.Kind.MOD_KEY) return StatCollector.translateToLocal(e.binding.getKeyDescription());
+            return e.title;
+        }
+
+        /** 键名可用的宽度：按钮区左侧留 10px 边距。 */
+        private int nameAvailWidth(Entry e) {
+            if (e.kind == Entry.Kind.NEI_KEY) {
+                String modText = modifierText(KeyManager.getModifierMask(e.ident));
+                return Math.max(layout(e.ident, modText, mainKeyText(e.ident))[0] - 10, 0);
+            }
+            if (e.kind == Entry.Kind.MOD_KEY) {
+                int mainW = Math.max(70, getStringWidth(mainKeyText(e.binding)) + 8);
+                return Math.max(slotWidth() - mainW - 10, 0);
+            }
+            return slotWidth();
+        }
+
+        private boolean isTwoLineEntry(Entry e) {
+            return e.kind == Entry.Kind.NEI_KEY || e.kind == Entry.Kind.MOD_KEY
+                    ? fontRenderer.getStringWidth(entryDisplayName(e)) > nameAvailWidth(e)
+                    : false;
+        }
+
+        /** 键名绘制：超宽自动换行到第二栏（行高 40 的行）；第二行没有按钮，可延伸到行尾（避开滚动条），仍超长才截断。 */
+        @SuppressWarnings("unchecked")
+        private void drawWrappedName(String prefix, int textX, int y, int firstLineAvail) {
+            if (fontRenderer.getStringWidth(prefix) <= firstLineAvail) {
+                fontRenderer.drawString(prefix, textX, y + 6, 0xFFFFFF);
+                return;
+            }
+            // 第二行可用整行宽度，右侧留滚动条余量；断行只按第一行宽度切，剩余整段放第二行
+            int secondLineAvail = Math.max(slotWidth() - 12 - textX, firstLineAvail);
+            List<String> lines = fontRenderer.listFormattedStringToWidth(prefix, firstLineAvail);
+            fontRenderer.drawString(lines.get(0), textX, y + 6, 0xFFFFFF);
+            if (prefix.length() > lines.get(0).length()) {
+                String rest = prefix.substring(lines.get(0).length());
+                if (rest.startsWith(" ")) rest = rest.substring(1);
+                fontRenderer.drawString(
+                        NEIClientUtils.cropText(fontRenderer, rest, secondLineAvail),
+                        textX,
+                        y + 24,
+                        0xFFFFFF);
+            }
         }
 
         @Override
@@ -507,8 +564,7 @@ public class GuiKeyBindSettings extends GuiScreenWidget {
                 String tag = StatCollector.translateToLocal(tagKey);
                 fontRenderer.drawString(tag, x - fontRenderer.getStringWidth(tag) - 6, y + 6, 0xFFA0A0A0);
             }
-            String cropped = NEIClientUtils.cropText(fontRenderer, prefix, Math.max(modX - 10, 0));
-            fontRenderer.drawString(cropped, x + 10, y + 6, 0xFFFFFF);
+            drawWrappedName(prefix, x + 10, y, Math.max(modX - 10, 0));
 
             if (modW > 0) {
                 boolean modHover = new Rectangle(modX, 0, modW, 20).contains(mx, my);
@@ -548,8 +604,7 @@ public class GuiKeyBindSettings extends GuiScreenWidget {
             int mainW = Math.max(70, getStringWidth(mainText) + 8);
             int mainX = slotWidth() - mainW;
 
-            String cropped = NEIClientUtils.cropText(fontRenderer, prefix, Math.max(mainX - 10, 0));
-            fontRenderer.drawString(cropped, x + 10, y + 6, 0xFFFFFF);
+            drawWrappedName(prefix, x + 10, y, Math.max(mainX - 10, 0));
 
             boolean mainHover = new Rectangle(mainX, 0, mainW, 20).contains(mx, my);
             LayoutManager.drawButtonBackground(x + mainX, y, mainW, 20, true, active || mainHover ? 2 : 1);

@@ -96,7 +96,7 @@ public abstract class ShortcutInputHandler {
                     return ItemPanels.bookmarkPanel.pullBookmarkItems(groupId, NEIClientUtils.shiftKey());
                 }
 
-                if (KeyManager.isKeyDown("bookmark.chat_link")) {
+                if (KeyManager.isKeyDown("bookmark.chat_link", NEIClientUtils.CTRL_HASH)) {
                     NEIClientUtils.sendChatItemLink(BookmarkPayload.of(groupId).toNBT());
                     return true;
                 }
@@ -139,7 +139,7 @@ public abstract class ShortcutInputHandler {
             return copyItemStackOreDictionary(stackover);
         }
 
-        if (KeyManager.isKeyDown("bookmark.chat_link")) {
+        if (KeyManager.isKeyDown("bookmark.chat_link", NEIClientUtils.CTRL_HASH)) {
             return sendRecipeInChatLink(stackover, NEIClientUtils.shiftKey());
         }
 
@@ -495,11 +495,12 @@ public abstract class ShortcutInputHandler {
 
             if (NEIClientConfig.autocraftingEnabled() && ItemPanels.bookmarkPanel.getGrid().isCraftingMode(groupId)) {
                 hotkeys.put(
-                        NEIClientConfig
-                                .getKeyName("gui.craft_items", NEIClientUtils.SHIFT_HASH + NEIClientUtils.CTRL_HASH),
+                        // Ctrl is the extra parameter bit on top of the stored combo; Shift is NOT part of the
+                        // trigger (it was the DEFAULT required modifier, which the user may have changed)
+                        NEIClientConfig.getKeyName("gui.craft_items", NEIClientUtils.CTRL_HASH),
                         NEIClientUtils.translate("bookmark.group.craft_missing"));
                 hotkeys.put(
-                        KeyManager.getKeyName("gui.craft_items", NEIClientUtils.SHIFT_HASH),
+                        KeyManager.getKeyName("gui.craft_items"),
                         NEIClientUtils.translate("bookmark.group.craft_all"));
             }
 
@@ -596,7 +597,7 @@ public abstract class ShortcutInputHandler {
             if ((ItemPanels.itemPanel.contains(mousex, mousey)
                     || ItemPanels.itemPanel.historyPanel.contains(mousex, mousey)) && FavoriteRecipes.contains(stack)) {
                 hotkeys.put(
-                        KeyManager.getKeyName("bookmark.favorite", NEIClientUtils.SHIFT_HASH),
+                        KeyManager.getKeyName("bookmark.favorite"),
                         NEIClientUtils.translate("recipe.favorite.bookmark_recipe"));
             }
 
@@ -664,13 +665,13 @@ public abstract class ShortcutInputHandler {
                 }
 
                 if (NEIClientConfig.autocraftingEnabled()) {
+                    // Ctrl is the extra parameter bit on top of the stored combo; Shift was only the DEFAULT
+                    // required modifier and is not part of the trigger once the user changes the modifier
                     hotkeys.put(
-                            KeyManager.getKeyName(
-                                    "gui.craft_items",
-                                    NEIClientUtils.SHIFT_HASH + NEIClientUtils.CTRL_HASH),
+                            KeyManager.getKeyName("gui.craft_items", NEIClientUtils.CTRL_HASH),
                             NEIClientUtils.translate("itempanel.craft_missing"));
                     hotkeys.put(
-                            KeyManager.getKeyName("gui.craft_items", NEIClientUtils.SHIFT_HASH),
+                            KeyManager.getKeyName("gui.craft_items"),
                             NEIClientUtils.translate("itempanel.craft_all"));
                 }
             }

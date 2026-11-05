@@ -74,7 +74,8 @@ public class ItemZoom extends Widget implements IContainerInputHandler {
 
             if (NEIClientConfig.getBooleanSetting("inventory.itemzoom.enabled")
                     && NEIClientConfig.getBooleanSetting("inventory.itemzoom.helpText")) {
-                String keyName = KeyManager.getKeyName("itemzoom.toggle", NEIClientUtils.SHIFT_HASH);
+                // Shift was only the DEFAULT required modifier; the stored combo may have been changed by the user
+                String keyName = KeyManager.getKeyName("itemzoom.toggle");
 
                 if (keyName != null) {
                     String helpText = NEIClientUtils.translate("itemzoom.toggle", keyName);

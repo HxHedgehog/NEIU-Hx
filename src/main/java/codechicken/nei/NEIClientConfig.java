@@ -850,7 +850,7 @@ public class NEIClientConfig {
         API.addKeyBind("gui.hide", Keyboard.KEY_O);
         API.addKeyBind("gui.search", Keyboard.KEY_F);
         API.addKeyBind("gui.overlay", Keyboard.KEY_S);
-        API.addKeyBind("gui.craft_items", 0);
+        API.addKeyBind("gui.craft_items", Keyboard.KEY_C);
         API.addKeyBind("gui.getprevioussearch", Keyboard.KEY_UP);
         API.addKeyBind("gui.getnextsearch", Keyboard.KEY_DOWN);
         API.addKeyBind("gui.next_tooltip", Keyboard.KEY_Z);
@@ -864,7 +864,7 @@ public class NEIClientConfig {
         API.addKeyBind("recipe.next_recipe", Keyboard.KEY_RIGHT);
 
         API.addKeyBind("bookmark.add", Keyboard.KEY_A);
-        API.addKeyBind("bookmark.favorite", 0);
+        API.addKeyBind("bookmark.favorite", Keyboard.KEY_A);
         API.addKeyBind("bookmark.favorite_item", 0);
         API.addKeyBind("bookmark.remove_recipe", Keyboard.KEY_DELETE);
         API.addKeyBind("bookmark.chat_link", Keyboard.KEY_L);

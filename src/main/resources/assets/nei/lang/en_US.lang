@@ -215,13 +215,13 @@ nei.options.keys.bookmark.add=Add Bookmark (Single Key Only)
 nei.options.keys.bookmark.remove_recipe=Remove Group from Bookmarks (Single Key Only)
 nei.options.keys.bookmark.pull_items=Pull all Bookmarked Items (Single Key Only)
 nei.options.keys.bookmark.hide=Toggle Bookmark Panel Visibility
-nei.options.keys.bookmark.chat_link=Send link to chat (Required Modifier)
+nei.options.keys.bookmark.chat_link=Send link to chat (Fixed Ctrl+Shift)
 nei.options.keys.gui.overlay=Fill/Overlay Crafting Grid
 nei.options.keys.gui.getprevioussearch=Previous Search
 nei.options.keys.gui.getnextsearch=Next Search
 nei.options.keys.gui.next_tooltip=Next Tooltip
 nei.options.keys.copy.name=Copy Item Name (Required Modifier)
-nei.options.keys.gui.craft_items=Craft Items (Required Modifier)
+nei.options.keys.gui.craft_items=Craft Items (Required Modifier, Ctrl+Shift = Craft Missing)
 nei.options.keys.copy.oredict=Copy Item OreDictionary (Required Modifier)
 nei.options.keys.copy.identifier=Copy Item ID (Required Modifier)
 nei.options.keys.itemzoom.toggle=Toggle Item Zoom (Required Modifier)

@@ -470,7 +470,7 @@ public class NEIRecipeWidget extends Widget {
                 pStack -> this.permutations.getOrDefault(pStack, Collections.emptyList()).size() > 1
                         && pStack.contains(mouseX - this.x, mouseY - this.y - yShift))) {
             hotkeys.put(
-                    KeyManager.getKeyName("bookmark.favorite_item", NEIClientUtils.SHIFT_HASH),
+                    KeyManager.getKeyName("bookmark.favorite_item"),
                     NEIClientUtils.translate("recipe.favorite.toggle"));
         }
 

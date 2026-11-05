@@ -33,7 +33,7 @@ public class KeyManager {
     public static LinkedList<IKeyStateTracker> trackers = new LinkedList<>();
     private static final Map<String, KeyBinding> keyBindings = new java.util.LinkedHashMap<>();
     private static final Map<String, String> keyAliases = new HashMap<>();
-    private static volatile boolean pendingOptionsReload = false;
+    private static volatile boolean pendingOptionsReload = true;
 
     private static final int MOD_MASK = NEIKeyboardUtils.CTRL_HASH | NEIKeyboardUtils.SHIFT_HASH
             | NEIKeyboardUtils.ALT_HASH;
@@ -81,9 +81,37 @@ public class KeyManager {
 
     /** Keys that must always be a modifier combo (强制组合键): the modifier button never cycles to None. */
     private static final Map<String, Integer> requiredModifiers = new HashMap<>();
-    /** Keys that only work as a plain single key (强制单键): no modifier button is shown. */
+    /**
+     * Keys that only work as a plain single key (强制单键): no modifier button is shown, and rebinding captures the bare
+     * key even if modifiers are held. Includes keys whose subfeatures use FIXED modifier prefixes (e.g.
+     * bookmark.chat_link: Ctrl+key sends the link, Ctrl+Shift+key adds ingredients) — the prefix must stay available,
+     * so the user can only rebind the final key.
+     */
     private static final Set<String> plainOnlyKeys = new HashSet<>(
-            Arrays.asList("bookmark.add", "bookmark.remove_recipe", "bookmark.pull_items"));
+            Arrays.asList("bookmark.add", "bookmark.remove_recipe", "bookmark.pull_items", "bookmark.chat_link"));
+    /**
+     * Fixed modifier prefixes for subfeature keys (ident -> required modifier bits): the key only fires while the
+     * prefix is held, so the settings screen shows the prefix as part of the binding and conflict checks must use the
+     * effective combos ({@link #getEffectiveKeyCodes}) instead of the stored plain code. The user rebinds only the
+     * final key (these keys are plain-only), e.g. bookmark.chat_link: Ctrl+key sends the link, Ctrl+Shift+key adds the
+     * ingredients.
+     */
+    private static final Map<String, Integer> fixedPrefixes = new HashMap<>();
+
+    static {
+        fixedPrefixes.put("bookmark.chat_link", NEIKeyboardUtils.CTRL_HASH);
+    }
+    /**
+     * Subfeature keys that fire an EXTRA variant while an additional modifier is held on top of the stored combo (ident
+     * -> extra modifier bits): gui.craft_items fires "craft missing ingredients" with Ctrl held (the stored combo, e.g.
+     * Shift+C, must still match). The stored combo stays the primary binding; the variant occupies the extra combo in
+     * conflict checks ({@link #getEffectiveKeyCodes}).
+     */
+    private static final Map<String, Integer> prefixVariants = new HashMap<>();
+
+    static {
+        prefixVariants.put("gui.craft_items", NEIKeyboardUtils.CTRL_HASH);
+    }
     /** Keys that fire only while the search field is focused (搜索框聚焦). */
     private static final Set<String> searchContextKeys = new HashSet<>(
             Arrays.asList("gui.search", "gui.getprevioussearch", "gui.getnextsearch"));
@@ -144,10 +172,13 @@ public class KeyManager {
 
     public static KeyBinding registerKeyBinding(String ident, int defaultKey) {
         return keyBindings.computeIfAbsent(ident, id -> {
+            // plain-only keys (强制单键, incl. fixed-prefix subfeatures like bookmark.chat_link) always store a
+            // bare key: their modifier prefixes/policies are enforced dynamically, never via stored bits
+            final boolean plainOnly = plainOnlyKeys.contains(id);
             int defMod = defaultKey & MOD_MASK;
-            if (defMod == 0) defMod = requiredModifiers.getOrDefault(id, 0);
+            if (defMod == 0 && !plainOnly) defMod = requiredModifiers.getOrDefault(id, 0);
             final int key = NEIKeyboardUtils.unhash(defaultKey);
-            final int defaultCode = defMod != 0 ? defMod | key : key;
+            final int defaultCode = plainOnly ? key : defMod != 0 ? defMod | key : key;
             defaultKeyCodes.put(id, defaultCode);
             final KeyBinding binding = new KeyBinding("nei.options.keys." + id, defaultCode, getCategory(id));
             ClientRegistry.registerKeyBinding(binding);
@@ -212,6 +243,47 @@ public class KeyManager {
         binding.setKeyCode((getKeyCode(ident) & MOD_MASK) | NEIKeyboardUtils.unhash(mainKey));
     }
 
+    /**
+     * Stores a new main key captured from the physical keyboard: the modifiers actually held at capture time are bound
+     * together with the main key (e.g. pressing Ctrl+Shift+L binds Ctrl+Shift+L). Required-combo keys keep their
+     * mandatory modifier on top of whatever was held. The keyTyped event only carries the bare main key, so without
+     * this capture a 3-key combo would silently bind as an unmodified key, and isKeyDown's strict modifier matching
+     * would then reject it while the modifiers are held.
+     */
+    public static void setMainKeyFromCapture(String ident, int mainKey) {
+        final KeyBinding binding = getKeyBinding(ident);
+        if (binding == null) return;
+        final int mainKeyBits = NEIKeyboardUtils.unhash(mainKey);
+        if (mainKeyBits == Keyboard.KEY_NONE) {
+            // unbinding (right-click clear): keep the stored modifier, as in setMainKey
+            binding.setKeyCode((getKeyCode(ident) & MOD_MASK) | mainKeyBits);
+            return;
+        }
+        // plain-only keys (强制单键 / fixed-prefix subfeatures) bind the bare key even if modifiers are held,
+        // and never gain the mandatory modifier bit: for fixed-prefix keys (bookmark.chat_link) the prefix is
+        // checked dynamically by isKeyDown(ident, mask), storing it would fight the migration in
+        // fixRequiredModifiers (add-branch vs strip-branch) since those keys are in BOTH maps
+        final boolean plainOnly = plainOnlyKeys.contains(ident);
+        final int heldMods = plainOnly ? 0 : getHeldModifiers();
+        final int required = plainOnly ? 0 : requiredModifiers.getOrDefault(ident, 0);
+        binding.setKeyCode(mainKeyBits | heldMods | required);
+    }
+
+    /** Modifier bits (CTRL/SHIFT/ALT hash) currently held on the physical keyboard. */
+    public static int getHeldModifiers() {
+        int mods = 0;
+        if (Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) || Keyboard.isKeyDown(Keyboard.KEY_RCONTROL)) {
+            mods |= NEIKeyboardUtils.CTRL_HASH;
+        }
+        if (Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)) {
+            mods |= NEIKeyboardUtils.SHIFT_HASH;
+        }
+        if (Keyboard.isKeyDown(Keyboard.KEY_LMENU) || Keyboard.isKeyDown(Keyboard.KEY_RMENU)) {
+            mods |= NEIKeyboardUtils.ALT_HASH;
+        }
+        return mods;
+    }
+
     /** Stores a new modifier mask for the given binding, preserving its main key. */
     public static void setModifier(String ident, int modifierMask) {
         final KeyBinding binding = getKeyBinding(ident);
@@ -255,6 +327,63 @@ public class KeyManager {
         return ((mask & NEIKeyboardUtils.CTRL_HASH) != 0) == NEIClientUtils.controlKey()
                 && ((mask & NEIKeyboardUtils.SHIFT_HASH) != 0) == NEIClientUtils.shiftKey()
                 && ((mask & NEIKeyboardUtils.ALT_HASH) != 0) == NEIClientUtils.altKey();
+    }
+
+    /**
+     * Whether the binding fires with the given FIXED modifier prefix held: every prefix bit must be pressed, extra
+     * modifiers are allowed so handlers can use them as parameters (bookmark.chat_link: Ctrl+key sends the link,
+     * Ctrl+Shift+key adds the ingredients). Only meaningful for fixed-prefix keys (plain-only bindings, so the stored
+     * code carries no modifier bits of its own).
+     */
+    public static boolean isKeyDown(String ident, int mask) {
+        final KeyBinding binding = getKeyBinding(ident);
+        if (binding == null) return false;
+        final int keyCode = binding.getKeyCode();
+        if (keyCode == Keyboard.KEY_NONE) return false;
+        // mouse bindings (negative codes) carry no stored modifier bits of their own; ORing mask bits into a
+        // negative code would corrupt it, so resolve the main key directly
+        final int mainKey = keyCode < 0 ? keyCode
+                : (keyCode & MOD_MASK) == 0 ? keyCode : NEIKeyboardUtils.unhash(keyCode);
+        if (mainKey < 0) {
+            if (!Mouse.isButtonDown(mainKey + 100)) return false;
+        } else {
+            if (mainKey >= Keyboard.KEYBOARD_SIZE || !Keyboard.isKeyDown(mainKey)) return false;
+            if (NEIKeyboardUtils.isHashKey(mainKey)) return false; // bare-modifier binding: no prefix variants
+        }
+        if ((mask & NEIKeyboardUtils.CTRL_HASH) != 0 && !NEIClientUtils.controlKey()) return false;
+        if ((mask & NEIKeyboardUtils.SHIFT_HASH) != 0 && !NEIClientUtils.shiftKey()) return false;
+        if ((mask & NEIKeyboardUtils.ALT_HASH) != 0 && !NEIClientUtils.altKey()) return false;
+        return true;
+    }
+
+    /**
+     * All key combos this NEI key actually occupies. Plain keys occupy their stored combo; fixed-prefix keys
+     * (bookmark.chat_link) occupy the prefixed combos (prefix|main and prefix|SHIFT|main, the SHIFT variant being the
+     * all-ingredients parameter) since the bare stored key never fires; prefix-variant keys (gui.craft_items) occupy
+     * both the stored combo and its prefixed variant. Conflict detection compares these sets, so a plain binding of L
+     * never collides with chat_link's effective Ctrl+L / Ctrl+Shift+L, while a binding of Ctrl+Shift+L elsewhere does.
+     */
+    public static Set<Integer> getEffectiveKeyCodes(String ident) {
+        final Set<Integer> codes = new HashSet<>();
+        final KeyBinding binding = getKeyBinding(ident);
+        if (binding == null) return codes;
+        final int keyCode = binding.getKeyCode();
+        if (keyCode == Keyboard.KEY_NONE) return codes;
+        final Integer fixedPrefix = fixedPrefixes.get(ident);
+        if (fixedPrefix != null) {
+            if (keyCode < 0) return codes; // mouse binding: prefixed combos can't be encoded, skip conflict checks
+            final int mainKey = NEIKeyboardUtils.unhash(keyCode);
+            if (mainKey != Keyboard.KEY_NONE && !NEIKeyboardUtils.isHashKey(mainKey)) {
+                codes.add(fixedPrefix | mainKey);
+                codes.add(fixedPrefix | NEIKeyboardUtils.SHIFT_HASH | mainKey);
+            }
+            return codes;
+        }
+        codes.add(keyCode);
+        // the variant combo only exists for keyboard keys; ORing into a negative mouse code corrupts it
+        final Integer variant = prefixVariants.get(ident);
+        if (variant != null && keyCode > 0) codes.add(keyCode | variant);
+        return codes;
     }
 
     public static String getKeyName(String ident) {
@@ -331,68 +460,76 @@ public class KeyManager {
     }
 
     /**
-     * Whether a key binding conflicts with any other binding sharing the same full key code. Vanilla bindings are
-     * world-context, so they collide with third-party mod keys, other vanilla keys, and world-context NEI keys, but not
-     * with GUI/search/recipe-context NEI keys. Third-party mod keys fire in any context and conflict with everything
-     * sharing the code.
+     * Whether a key binding conflicts with any other binding sharing the same full key code. Vanilla bindings and
+     * third-party mod bindings are both world-context (FML's KeyInputEvent fires only with no GUI open), so they
+     * collide with each other, with other vanilla keys and with world-context NEI keys, but not with
+     * GUI/search/recipe-context NEI keys.
      */
     public static boolean isKeyBindingConflicting(KeyBinding binding) {
         if (binding == null) return false;
         final int code = binding.getKeyCode();
         if (code == Keyboard.KEY_NONE) return false;
-        if (isVanillaKeyByDescription(binding.getKeyDescription())) {
-            for (KeyBinding other : Minecraft.getMinecraft().gameSettings.keyBindings) {
-                if (other == null || other == binding || other.getKeyCode() != code) continue;
-                if (isOtherModKeyByDescription(other.getKeyDescription())) return true;
-                if (!isNeiKeyByDescription(other.getKeyDescription())) return true; // another vanilla key
-                if (getKeyContextByDescription(other.getKeyDescription()) == KeyContext.WORLD) return true;
-            }
-            return false;
-        }
         for (KeyBinding other : Minecraft.getMinecraft().gameSettings.keyBindings) {
-            if (other != null && other != binding && other.getKeyCode() == code) return true;
+            if (other == null || other == binding || other.getKeyCode() != code) continue;
+            final KeyContext otherCtx = getKeyContextByDescription(other.getKeyDescription());
+            if (otherCtx == KeyContext.WORLD) return true; // NEI world.* key
+            if (otherCtx == null) return true; // vanilla or third-party mod key (both world-context)
+            // NEI 仅GUI/搜索框/合成表上下文键与世界上下文互斥，不冲突
         }
         return false;
     }
 
     /**
-     * Whether this key conflicts with another key binding (vanilla or mod). The FULL stored key code (including the NEI
-     * modifier bits) is compared, so a combo key like Ctrl+C never conflicts with a plain C key, nor with a combo of
-     * the same main key under a different modifier. An unbound binding never conflicts, even if stale modifier bits
-     * remain in its stored code. Two NEI keys conflict only when they share the same {@link KeyContext} (e.g. a
-     * search-field key never conflicts with a recipe-view key, since those screens are mutually exclusive); vanilla
-     * bindings are treated as world-context. Third-party mod keys fire in any context and conflict with everything
-     * sharing the code.
+     * Whether this key conflicts with another key binding (vanilla or mod). NEI keys conflict only when their
+     * {@link #getEffectiveKeyCodes effective combos} intersect and they share the same {@link KeyContext} (e.g. a
+     * search-field key never conflicts with a recipe-view key, since those screens are mutually exclusive); for
+     * fixed-prefix keys the effective combos include the prefixed variants, so a plain L binding never collides with
+     * chat_link's Ctrl+L / Ctrl+Shift+L, but a binding of Ctrl+Shift+L elsewhere does. Vanilla bindings and third-party
+     * mod bindings are both world-context (FML's KeyInputEvent fires only with no GUI open), so they collide with
+     * world-context NEI keys and each other, but not with GUI/search/recipe-context NEI keys. An unbound binding never
+     * conflicts, even if stale modifier bits remain in its stored code.
      */
     public static boolean isKeyConflicting(String ident) {
         final KeyBinding binding = getKeyBinding(ident);
         if (binding == null) return false;
         if (getMainKeyCode(ident) == Keyboard.KEY_NONE) return false;
-        final int code = binding.getKeyCode();
         final KeyContext ctx = getKeyContext(ident);
+        final Set<Integer> selfCodes = getEffectiveKeyCodes(ident);
+        // NEI 键：生效组合相交且上下文重叠才冲突（固定前缀键按其前缀变体参与比较）
+        for (String otherIdent : getRegisteredKeyNames()) {
+            if (otherIdent.equals(ident) || getKeyContext(otherIdent) != ctx) continue;
+            for (int otherCode : getEffectiveKeyCodes(otherIdent)) {
+                if (selfCodes.contains(otherCode)) return true;
+            }
+        }
+        // 原版 + 第三方键（世界上下文）：码相同才冲突
         for (KeyBinding other : Minecraft.getMinecraft().gameSettings.keyBindings) {
-            if (other == null || other == binding || other.getKeyCode() != code) continue;
-            if (isOtherModKeyByDescription(other.getKeyDescription())) return true;
-            final KeyContext otherCtx = getKeyContextByDescription(other.getKeyDescription());
-            // Vanilla bindings are world-context; only a world-context NEI key can collide with them.
-            if (otherCtx == null) {
-                if (ctx == KeyContext.WORLD) return true;
+            if (other == null || other == binding) continue;
+            final String desc = other.getKeyDescription();
+            if (isOtherModKeyByDescription(desc)) {
+                if (ctx == KeyContext.WORLD && selfCodes.contains(other.getKeyCode())) return true;
                 continue;
             }
-            if (ctx == otherCtx) return true;
+            final KeyContext otherCtx = getKeyContextByDescription(desc);
+            if (otherCtx != null) continue; // 其他 NEI 键已在上面按生效组合比较过
+            if (ctx == KeyContext.WORLD && selfCodes.contains(other.getKeyCode())) return true;
         }
         return false;
     }
 
     public static String getKeyName(String ident, int meta) {
         final int keyCode = getKeyCode(ident);
-        return keyCode == Keyboard.KEY_NONE ? null : NEIKeyboardUtils.getKeyName(keyCode + meta);
+        // 用 | 而非 +：meta 与键位可能带相同修饰符位（如强制组合键自带 SHIFT），+ 会导致进位
+        // 把 SHIFT 位移成 ALT 位（(1<<26)+(1<<26)=1<<27），显示成错误的 Alt 组合
+        // 鼠标绑定（负码）不参与 | 拼接：负数补码被位污染后无法还原成鼠标键名
+        return keyCode == Keyboard.KEY_NONE ? null
+                : NEIKeyboardUtils.getKeyName(keyCode < 0 ? keyCode : keyCode | meta);
     }
 
     public static String getKeyName(String ident, int meta, int mouseBind) {
         final int keyCode = getKeyCode(ident);
         return keyCode == Keyboard.KEY_NONE && mouseBind == NEIMouseUtils.MOUSE_BTN_NONE ? null
-                : getKeyName(keyCode + meta, mouseBind);
+                : getKeyName(keyCode | meta, mouseBind);
     }
 
     public static String getKeyName(int keyBind, int mouseBind) {
@@ -466,15 +603,26 @@ public class KeyManager {
     /**
      * Required-combo keys (强制组合键) can never be None. Older options.txt entries may have stored the plain main key
      * without a modifier; restore the default modifier so the combo requirement survives a configuration migration.
+     * Conversely, plain-only keys (强制单键) must never carry modifier bits: strip stale bits stored by older configs so
+     * their fixed modifier prefixes keep working.
      */
     private static void fixRequiredModifiers() {
         for (Map.Entry<String, KeyBinding> entry : keyBindings.entrySet()) {
-            final Integer defMod = requiredModifiers.get(entry.getKey());
-            if (defMod == null) continue;
+            final String ident = entry.getKey();
             final KeyBinding binding = entry.getValue();
             final int keyCode = binding.getKeyCode();
-            if (keyCode > 0 && (keyCode & MOD_MASK) == 0) {
-                binding.setKeyCode(keyCode | defMod);
+            if (keyCode <= 0) continue;
+            // plain-only check FIRST: bookmark.chat_link sits in both maps (its mandatory Ctrl prefix is enforced
+            // dynamically by isKeyDown(ident, mask)), the stored code must always stay a bare key
+            if (plainOnlyKeys.contains(ident)) {
+                if ((keyCode & MOD_MASK) != 0) {
+                    binding.setKeyCode(NEIKeyboardUtils.unhash(keyCode));
+                }
+            } else {
+                final Integer defMod = requiredModifiers.get(ident);
+                if (defMod != null && (keyCode & MOD_MASK) == 0) {
+                    binding.setKeyCode(keyCode | defMod);
+                }
             }
         }
     }
