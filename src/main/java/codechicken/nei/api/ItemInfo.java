@@ -328,8 +328,10 @@ public class ItemInfo {
         API.setOverrideName(new ItemStack(Blocks.water), "Water Still");
         API.setOverrideName(new ItemStack(Blocks.flowing_lava), "Lava Source");
         API.setOverrideName(new ItemStack(Blocks.lava), "Lava Still");
-        API.setOverrideName(new ItemStack(Blocks.end_portal), "End Portal");
-        API.setOverrideName(new ItemStack(Blocks.end_portal_frame), "End Portal Frame");
+        // end_portal / end_portal_frame 不再设置覆盖名：两者现已有正式物品形态与
+        // 本地化名（原版 en_US；zh_CN 由 EtFR 注入 assets/minecraft/lang 提供）。
+        // 硬编码英文名会在非英文环境下经 LayoutManager.handleItemDisplayName
+        // 整行替换 tooltip 首行，吞掉本地化名与 F3+H 的 id 后缀。
         API.hideItem(new ItemStack(Blocks.double_stone_slab, 1, OreDictionary.WILDCARD_VALUE));
         API.hideItem(new ItemStack(Blocks.double_wooden_slab, 1, OreDictionary.WILDCARD_VALUE));
         API.hideItem(new ItemStack(Blocks.carrots));
